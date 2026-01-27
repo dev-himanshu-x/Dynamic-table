@@ -1,73 +1,91 @@
 import { createFileRoute } from "@tanstack/react-router";
-import "../App.css";
 import { useState } from "react";
 import axios from "axios";
-import { Table } from "antd";
-import type { TableProps } from "antd";
+import { Table , Form , Modal, Select } from "antd";
+import type { DefaultOptionType } from "antd/es/select";
+import "../App.css";
 
-//  https://potterapi-fedeperin.vercel.app/en/spells
-
-export const Route = createFileRoute("/")({ component: App });
+export const Route = createFileRoute("/")({
+  component: App,
+});
 
 function App() {
-  const [name, setName] = useState("");
-  const [resValue, setResValue] = useState([]);
+  const [url, setUrl] = useState(
+    "https://potterapi-fedeperin.vercel.app/en/books",
+  );
+  const [data, setData] = useState<any[]>([]);
+  const [options, setOptions] = useState<DefaultOptionType[]>([]);
+  const [checkedList, setCheckedList] = useState<string[]>([]);
+  const [columns, setColumns] = useState<any[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  function getData() {
-    axios
-      .get(name)
-      .then(function (response) {
-        setResValue(response.data);
-      })
-      .catch(function (error) {
-        // handle error
-        console.log(error);
-      })
-      .finally(function () {
-        // always executed
-      });
-  }
+  const getData = () => {
+    if (!url) return;
 
-  const columns: TableProps<any>["columns"] = [
-    {
-      title: "index",
-      dataIndex: "index",
-      key: "index",
-    },
-    {
-      title: "spell",
-      dataIndex: "spell",
-      key: "spell",
-      render: (text) => <a>{text}</a>,
-    },
-    {
-      title: "use",
-      dataIndex: "use",
-      key: "use",
-    }
-  ];
+    axios.get(url).then((res) => {
+      setData(res.data);
+      if (res.data.length > 0) {
+        setOptions(Object.keys(res.data[0]).map((key) => ({
+          label: key,
+          value: key,
+        })));
+      }
+      setIsModalOpen(true);
+    });
+  };
 
-  const jsonData: any[] = resValue;
-  console.log(jsonData)
+  const handleOk = () => {
+    const newColumns = checkedList.map((key) => ({
+      title: key,
+      dataIndex: key,
+      key,
+    }));
+    setColumns(newColumns);
+    setIsModalOpen(false);
+  };
+
+  const handleCancel = () => {
+    setIsModalOpen(false);
+  };
 
   return (
-    <div className="App flex justify-center items-center flex-col h-screen">
+    <div className="flex flex-col items-center p-5 h-screen bg-[#E1E3FF]">
       <div>
         <input
-          placeholder="Enter URL"
-          className="border m-2"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
+          className="border m-2 rounded-2xl p-1 bg-white"
+          placeholder="Enter API URL"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
         />
-        <button className="border" onClick={getData}>
-          Search
+        <button
+          className="border px-3 rounded-2xl p-1 bg-white font-bold"
+          onClick={getData}
+        >
+          Go
         </button>
       </div>
-      <Table
-        columns={columns}
-        dataSource={jsonData}
-        className="p-10"
-      />;
+      <Form>
+      <Modal
+        title="Select Items to show"
+        open={isModalOpen}
+        onOk={handleOk}
+        onCancel={handleCancel}
+      >
+        <Select
+          mode="multiple"
+          className="w-full"
+          options={options}
+          value={checkedList}
+          onChange={setCheckedList}
+        />
+      </Modal>
+      </Form>
+      <div className="w-full mt-4">
+        <Table
+          columns={columns}
+          dataSource={data}
+        />
+      </div>
     </div>
   );
 }
